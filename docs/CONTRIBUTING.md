@@ -21,18 +21,18 @@ Nous sommes deux sur ce projet. Ces règles sont volontairement simples : elles 
 On suit la convention [Conventional Commits](https://www.conventionalcommits.org) :
 
 ```
-type: description courte
+type: short description
 ```
 
 - Les **types** sont les mêmes que les préfixes de branche : `feat`, `fix`, `docs`, `refactor`, `chore`.
-- La **description** est en français, courte, et commence par un verbe à l'infinitif.
+- La **description** est en anglais, courte, à l'impératif (`add`, pas `added`), sans point final.
 
 Exemples :
 
 ```
-feat: ajouter le formulaire de connexion
-fix: empêcher un stock négatif
-docs: compléter la section installation
+feat: add login form
+fix: prevent negative stock
+docs: complete installation section
 ```
 
 Un commit = un changement logique. Mieux vaut plusieurs petits commits qu'un gros commit « divers ».
