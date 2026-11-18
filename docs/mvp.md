@@ -1,40 +1,90 @@
 # MVP — HBntory
 
-Le MVP (Minimum Viable Product) couvre toutes les exigences obligatoires du sujet, sans fonctionnalité superflue.
-Les sections 1 et 2 sont obligatoires et indiquent l'ordre de réalisation. La section 3 est optionnelle.
+Contexte : équipe de 2 personnes, 12 jours de projet.
+
+Notre MVP contient toutes les exigences obligatoires du sujet, et rien de plus.
+Le principal risque identifié est une intégration ratée en fin de projet :
+des composants qui fonctionnent seuls mais ne communiquent pas entre eux.
+Nous commençons donc par une **tranche verticale** : faire traverser tous les
+composants par un cas simple, avant de compléter chaque composant.
+
+Règle de tri :
+- **D'abord** : obligatoire, et nécessaire au fonctionnement des autres composants.
+- **Plus tard** : obligatoire, mais aucun autre composant n'en dépend.
+- **Si on a le temps** : non demandé par le sujet.
+- **Hors périmètre** : explicitement exclu par le sujet.
 
 ---
 
-## 1. Ce que nous implémentons en premier
+## 1. D'abord — le squelette qui traverse tout le système
 
-*Objectif : un système qui fonctionne de bout en bout, même de façon minimale.*
+**Infrastructure**
+- `docker-compose.yml` qui lance : base PostgreSQL, API Produits, Backoffice,
+  serveur MCP, service IA.
 
-- **Infrastructure :** Docker Compose qui lance la base de données et la Product API.
-- **Base de données :** tables des utilisateurs, des branches et du stock (branche, identifiant produit, quantité).
-- **Backoffice — connexion :** authentification avec mot de passe haché, distinction entre l'admin et les utilisateurs communs.
-- **Backoffice — stock :** un utilisateur commun consulte, ajoute et retire du stock dans sa branche.
-- **Product MCP Server :** deux outils, lister les produits et obtenir le détail d'un produit.
-- **AI Query Service :** un agent qui répond à une question simple sur un produit.
-- **Client Web Interface :** une page avec un champ de question ; la réponse arrive en un seul message par WebSocket.
+**Base de données (Tâche 1)**
+- Tables `users`, `branches`, `stock` (agence + identifiant produit + quantité).
+- Aucune donnée produit stockée localement.
+- Script d'initialisation : un admin (mot de passe haché), deux agences,
+  du stock d'exemple.
+- Règles : quantité jamais négative, quantités entières positives.
 
-## 2. Ce que nous laissons pour plus tard
+**Backoffice**
+- Connexion avec mot de passe haché et session.
+- Vérification du rôle et de l'agence côté serveur.
+- Utilisateur commun : consulter, ajouter et retirer du stock dans son agence.
 
-*Obligatoire, mais réalisé une fois le socle de la section 1 en place.*
+**Côté public**
+- Serveur MCP avec les outils `list_products` et `get_product` (API Produits).
+- Un premier outil de stock en lecture seule (stock d'un produit par agence).
+- Service IA : une route REST qui reçoit une question et renvoie la réponse de l'agent.
+- Client web : une page avec un champ de texte, un bouton et la zone de réponse.
 
-- **Admin :** lister, créer, modifier et supprimer (soft delete) les utilisateurs ; changer leur mot de passe et leur branche.
-- **Règles de sécurité :** un utilisateur commun ne peut pas agir sur une autre branche ; l'admin ne gère pas le stock ; ces règles sont vérifiées côté serveur.
-- **Validation du stock :** la quantité demandée est vérifiée et le stock ne devient jamais négatif.
-- **Stock pour l'agent :** l'agent accède aux quantités en stock pour répondre aux questions sur les branches.
-- **Questions complexes :** plusieurs produits et plusieurs branches dans une même question.
-- **Fiabilité des réponses :** l'agent indique clairement quand l'information est indisponible, au lieu d'inventer.
-- **Streaming :** affichage progressif de la réponse. Ce n'est pas une exigence du sujet, mais un engagement de l'équipe : il justifie le choix de WebSocket (voir `decisions.md`, décision 2).
-- **Finalisation :** tests, README et documentation.
+**Objectif de fin de phase :** la question « Quelle agence a le produit 15 ? »
+traverse Client web, Service IA, serveur MCP, API Produits et base de données,
+et reçoit une réponse correcte.
 
-## 3. Ce que nous tenterons seulement si le temps le permet
+---
 
-*Non demandé par le sujet. Aucun de ces points ne retarde les sections 1 et 2.*
+## 2. Plus tard — le reste des obligations
 
-- Historique des mouvements de stock.
-- Recherche et filtres dans la liste du stock.
-- Mise en forme soignée des interfaces.
-- Historique de conversation dans le chat.
+**Backoffice : utilisateur commun**
+- Lister les produits en stock de son agence, avec leurs noms récupérés
+  depuis l'API Produits.
+- Vérifier que l'identifiant produit existe dans l'API avant un ajout de stock.
+
+**Backoffice : admin**
+- Lister les utilisateurs.
+- Créer un utilisateur commun et l'assigner à une agence.
+- Modifier un utilisateur.
+- Changer le mot de passe d'un utilisateur.
+- Changer l'agence d'un utilisateur.
+- Suppression douce (soft-delete) d'un utilisateur.
+- Interdire à l'admin toute action sur le stock.
+
+**Service IA**
+- Outil MCP « produits disponibles dans une agence ».
+- Questions à plusieurs produits (« 3 unités de X, 2 de Y, 4 de Z : quelle agence ? »).
+- Réponse « information indisponible » quand les outils ne renvoient rien,
+  sans invention.
+
+**Finalisation**
+- Tests, README et documentation (Tâche 8).
+- Préparation de la présentation (Tâche 9).
+
+---
+
+## 3. Si on a le temps — non demandé par le sujet
+
+- Affichage progressif de la réponse (streaming), voir décision 2.
+- Interface plus soignée (CSS travaillé).
+- Historique de conversation sur la page publique.
+- Recherche ou filtres dans les listes du Backoffice.
+
+---
+
+## 4. Hors périmètre — exclu par le sujet
+
+- Création d'autres administrateurs.
+- HTTPS / TLS.
+- Gestion du stock par l'admin (interdite par le sujet).
