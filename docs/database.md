@@ -69,7 +69,26 @@ Résultat attendu : `hbntory | hbntory_db`. Taper `\q` pour quitter.
 
 ### 4.1 branches
 
+Une ligne = une agence.
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| `id` | à compléter | à compléter | Identifiant unique de l'agence (clé primaire) |
+| `name` | à compléter | à compléter | Nom de l'agence |
+
 ### 4.2 users
+
+Une ligne = un employé (utilisateur commun) ou l'admin.
+
+| Colonne | Type | Contraintes | Description |
+|---|---|---|---|
+| `id` | à compléter | Clé primaire | Identifiant unique de l'utilisateur |
+| `name` | à compléter | à compléter | Nom de l'employé |
+| `username` | à compléter | `UNIQUE` | Identifiant de connexion, choisi par l'admin |
+| `password_hash` | à compléter | à compléter | Hash du mot de passe (jamais le mot de passe lui-même) |
+| `is_admin` | à compléter | à compléter | `true` pour l'admin, `false` pour un utilisateur commun |
+| `branch_id` | à compléter | Clé étrangère → `branches.id` | Agence de l'utilisateur commun ; `NULL` pour l'admin |
+| `is_deleted` | à compléter | à compléter | `true` si l'utilisateur a été supprimé (suppression douce) |
 
 ### 4.3 stock
 
