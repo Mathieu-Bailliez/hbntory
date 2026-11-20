@@ -7,6 +7,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - bdd_data:/var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
 
