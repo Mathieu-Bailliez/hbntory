@@ -146,9 +146,28 @@ Une ligne = la quantité d'un produit précis dans une agence précise.
 | Les utilisateurs supprimés ne sont pas effacés | `is_deleted = true` ; la ligne reste, la connexion est refusée |
 | Quantité ajoutée ou retirée = entier positif ; produit existant dans l'API | Vérifié par le code Python avant d'écrire en base (détaillé avec la carte 4) |
 
-## 7. Données initiales
+## 7. Initialisation de la base
 
-À compléter avec le script d’initialisation (carte 3).
+### Stratégie
+
+Avec la limite imposée de 12 jours, nous n'avons pas le temps d'implémenter des migrations, qui seraient en théorie meilleures pour la maintenabilité. Nous avons donc choisi un seul script d'initialisation SQL, exécuté automatiquement par PostgreSQL au premier démarrage : la base crée ses tables seule, sans dépendre du Backoffice (le serveur MCP peut la lire même si le Backoffice n'a jamais été lancé). La limite : pour modifier une table, il faut repartir d'une base vide et perdre les données. C'est acceptable ici, car HBntory est un projet fictif dont les données de démo sont recréées à volonté par `seed.py`.
+
+### Création des tables
+
+- `db/init/01_schema.sql` est monté dans le conteneur `bdd` sur `/docker-entrypoint-initdb.d` (lecture seule). PostgreSQL exécute les fichiers de ce dossier par ordre alphabétique, uniquement quand le volume est vide.
+- Réappliquer (efface les données) : `docker compose down -v` puis `docker compose up -d bdd`.
+- Vérifier : `docker compose logs bdd | grep initdb` → `running /docker-entrypoint-initdb.d/01_schema.sql`, puis `docker compose exec bdd psql -U hbntory -d hbntory_db -c '\dt'` → 3 tables.
+- `DEFAULT false` est écrit dans la base, en plus de `default=False` côté Python : la base garantit ses propres règles, quelle que soit la provenance de la ligne (défense en profondeur).
+- `models.py` décrit les tables pour Python et `01_schema.sql` les crée : les deux doivent rester identiques.
+
+### Données de départ
+
+- Prérequis : `ADMIN_PASSWORD` et `DEMO_USER_PASSWORD` remplis dans `.env` (voir `.env.example`).
+- Lancer : `cd backoffice && python seed.py`.
+- Contenu : 2 agences (Paris, Lyon), l'admin (sans agence), un employé par agence (`alice`, `bruno`), du stock d'exemple (produit 15 dans les deux agences, produit 1 dans une seule, produit 3 nulle part).
+- Les mots de passe sont hachés avec Argon2 (`backoffice/security.py`), jamais stockés en clair.
+- Le script est idempotent : relancé, il ne crée aucun doublon.
+- Les identifiants produits sont provisoires et seront vérifiés auprès de l'API Produits.
 
 ## 8. Choix de conception
 
