@@ -11,6 +11,9 @@ class Branch(db.Model):
     users = db.relationship("User", back_populates="branch")
     stock_items = db.relationship("Stock", back_populates="branch")
 
+    def __repr__(self):
+        return f"<Branch {self.id} {self.name}"
+
 
 class User(db.Model):
     __tablename__ = "users"
@@ -30,6 +33,9 @@ class User(db.Model):
     is_deleted = db.Column(db.Boolean, nullable=False, default=False)
     branch = db.relationship("Branch", back_populates="users")
 
+    def __repr__(self):
+        return f"<User {self.id} {self.username} admin={self.is_admin}"
+
 
 class Stock(db.Model):
     __tablename__ = "stock"
@@ -43,3 +49,6 @@ class Stock(db.Model):
     product_api_id = db.Column(db.Integer, nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     branch = db.relationship("Branch", back_populates="stock_items")
+
+    def __repr__(self):
+        return f"<Stock branch={self.branch_id} product={self.product_api_id} qty={self.quantity}>"
