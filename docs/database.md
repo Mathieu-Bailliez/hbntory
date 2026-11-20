@@ -144,7 +144,7 @@ Une ligne = la quantité d'un produit précis dans une agence précise.
 | Le stock ne devient jamais négatif | `CHECK (quantity >= 0)`. On accepte 0 pour représenter la rupture de stock. |
 | Les détails des produits ne sont pas stockés | Seul `product_api_id` est gardé ; nom, prix, description restent dans l'API |
 | Les utilisateurs supprimés ne sont pas effacés | `is_deleted = true` ; la ligne reste, la connexion est refusée |
-| Quantité ajoutée ou retirée = entier positif ; produit existant dans l'API | Vérifié par le code Python avant d'écrire en base (détaillé avec la carte 4) |
+| Quantité ajoutée ou retirée = entier positif ; produit existant dans l'API | Vérifié par le code Python avant d'écrire en base (voir section 9) |
 
 ## 7. Initialisation de la base
 
@@ -191,4 +191,42 @@ Avec la limite imposée de 12 jours, nous n'avons pas le temps d'implémenter de
 - **`quantity >= 0` (et non `> 0`)** : 0 représente la rupture de stock.
 - **Pas de dates de création / modification** : recommandées par l'énoncé, mais aucune
   fonctionnalité du projet ne s'en sert ; l'énoncé demande de ne rien ajouter sans justification.
+
+## 9. Règles de validation
+
+### Principe
+Une règle peut être vérifiée à trois endroits :
+- **Le formulaire HTML** : confort pour l'employé seulement, car on peut le contourner en envoyant une requête sans passer par la page.
+- **Le code Python du Backoffice** : l'employé comprend grâce à un message d'erreur choisi.
+- **La base PostgreSQL** : dernier rempart, elle bloque tout, même si le code a un bug.
+
+Quand c'est possible, une règle est placée dans le code **et** dans la base (défense en profondeur). Une base ne peut vérifier que ce qu'elle contient (ses propres tables) et ne peut pas appeler un autre service.
+
+### Tableau des règles
+
+| Règle | Où | Pourquoi |
+|---|---|---|
+| 1. La quantité ne devient jamais négative | Code Python + base (`CHECK ck_stock_quantity_positive`, `quantity >= 0`) | Code : l'employé comprend grâce à un message d'erreur. Base : pour être sûr que la base elle-même bloque tout et annule. |
+| 2. Une modification demande une quantité entière strictement positive | Code Python, au début de la fonction, avant le calcul (formulaire : confort, `min="1"`) | La base ne reçoit que le résultat, pas le calcul : « retirer -3 » sur un stock de 15 donne 18, que le `CHECK` accepte. |
+| 3. Les opérations portent sur une agence valide | Base (clé étrangère `stock_branch_id_fkey`) + code Python | Base : elle vérifie en regardant ses autres tables, ce qu'elle connaît et contient (agence 99 refusée). Code : l'agence est prise dans le compte de l'employé connecté (`users.branch_id`), jamais dans la requête. On fait confiance uniquement à la base, pas à la requête : la clé étrangère accepterait Lyon pour une employée de Paris, car Lyon existe. |
+| 4. Le produit existe dans l'API Produits | Code Python, lors d'un ajout | La base ne connaît pas les produits (pas de table produit) : elle accepterait la ligne. Seul le code peut demander à l'API si le produit existe. Pour un retrait, la ligne de stock existe déjà. |
+
+### Si une règle est violée
+- **Refus par le code Python** : il refuse l'opération avant d'écrire (rien n'est écrit en base) et envoie directement un message choisi à l'employé.
+- **Refus par la base** : elle refuse la ligne et donne une erreur, qui remonte à Python, qui annule l'opération (`rollback`). L'employé voit un message compréhensible, pas l'erreur brute de PostgreSQL. La base reste inchangée.
+
+### Preuves (côté base)
+Dans `psql`, le stock de Paris pour le produit 15 vaut 10 :
+```sql
+UPDATE stock SET quantity = -1 WHERE branch_id = 1 AND product_api_id = 15;
+-- ERROR: new row for relation "stock" violates check constraint "ck_stock_quantity_positive"
+
+INSERT INTO stock (branch_id, product_api_id, quantity) VALUES (99, 15, 5);
+-- ERROR: insert or update on table "stock" violates foreign key constraint "stock_branch_id_fkey"
+-- DETAIL: Key (branch_id)=(99) is not present in table "branches".
+```
+Après ces deux essais, la quantité vaut toujours 10.
+
+### Ce qui reste à coder
+Les vérifications côté Python (règles 1 à 4) sont écrites avec les fonctionnalités du Backoffice : ajout et retrait de stock (Tâche 4 §1), vérification du produit auprès de l'API (Tâche 4 §3).
 
