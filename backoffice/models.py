@@ -8,6 +8,8 @@ class Branch(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
+    users = db.relationship("User", back_populates="branch")
+    stock_items = db.relationship("Stock", back_populates="branch")
 
 
 class User(db.Model):
@@ -20,6 +22,7 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, nullable=False, default=False)
     branch_id = db.Column(db.Integer, db.ForeignKey("branches.id"), nullable=True)
     is_deleted = db.Column(db.Boolean, nullable=False, default=False)
+    branch = db.relationship("Branch", back_populates="users")
 
 
 class Stock(db.Model):
@@ -29,3 +32,4 @@ class Stock(db.Model):
     branch_id = db.Column(db.Integer, db.ForeignKey("branches.id"), nullable=False)
     product_api_id = db.Column(db.Integer, nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
+    branch = db.relationship("Branch", back_populates="stock_items")
