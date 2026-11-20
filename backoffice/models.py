@@ -14,6 +14,12 @@ class Branch(db.Model):
 
 class User(db.Model):
     __tablename__ = "users"
+    __table_args__ = (
+        db.CheckConstraint(
+            "(is_admin AND branch_id IS NULL) OR (NOT is_admin AND branch_id IS NOT NULL)",
+            name="ck_users_admin_branch",
+        ),
+    )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), nullable=False)
@@ -27,6 +33,10 @@ class User(db.Model):
 
 class Stock(db.Model):
     __tablename__ = "stock"
+    __table_args__ = (
+        db.UniqueConstraint("branch_id", "product_api_id", name="uq_stock_branch_product"),
+        db.CheckConstraint("quantity >= 0", name="ck_stock_quantity_positive"),
+    )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     branch_id = db.Column(db.Integer, db.ForeignKey("branches.id"), nullable=False)
