@@ -1,3 +1,4 @@
+from auth import login_required
 from config import DATABASE_URL, SECRET_KEY
 from flask import Flask, redirect, render_template, request, session, url_for
 from models import User, db
@@ -7,6 +8,7 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SECRET_KEY"] = SECRET_KEY
 db.init_app(app)
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -22,8 +24,9 @@ def login():
 
 
 @app.route("/")
+@login_required
 def index():
-    # Provisoire : page d'accueil protégée et vraie page à la case 7
+    # Provisoire : vraie page d'accueil à la Tâche 4
     return f"Accueil — user_id en session : {session.get('user_id')} — <a href='/logout'>Se déconnecter</a>"
 
 
