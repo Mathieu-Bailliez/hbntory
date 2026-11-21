@@ -14,7 +14,7 @@ def login():
         username = request.form["username"]
         password = request.form["password"]
         user = User.query.filter_by(username=username).first()
-        if user is None or not verify_password(user.password_hash, password):
+        if user is None or not verify_password(user.password_hash, password) or user.is_deleted:
             return render_template("login.html", error="Identifiant ou mot de passe incorrect.")
         return f"Connecté : {user.name}"   # provisoire, remplacé à la case 6
     return render_template("login.html")
