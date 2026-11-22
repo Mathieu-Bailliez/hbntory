@@ -20,3 +20,6 @@ Nous avons choisi Argon2id, la référence actuelle pour le hachage des mots de 
 
 ### Comment un mot de passe est haché
 **Le sel.** Avant le hachage, un sel est ajouté au mot de passe : une valeur aléatoire, différente pour chaque mot de passe. Deux utilisateurs qui ont le même mot de passe obtiennent donc des hashes différents. Sans sel, un pirate qui vole la base verrait quels comptes partagent un mot de passe, et retrouverait les mots de passe courants dans des tables précalculées (listes « mot de passe → hash » préparées à l'avance). Le sel n'est pas secret : il est stocké en clair dans la chaîne du hash, car il sert à la vérification.
+
+### Comment la vérification fonctionne
+Un hash ne se « déchiffre » pas : on ne retrouve jamais le mot de passe à partir de lui. À la connexion, `verify_password` (`backoffice/security.py`) relit dans la chaîne stockée le sel et les réglages (`m`, `t`, `p`), hache le mot de passe saisi avec ces mêmes valeurs, puis compare le résultat à l'empreinte stockée. S'ils sont identiques, le mot de passe est correct. Sinon, la connexion est refusée avec le message générique « Identifiant ou mot de passe incorrect. ».
