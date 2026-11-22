@@ -12,7 +12,7 @@ class Branch(db.Model):
     stock_items = db.relationship("Stock", back_populates="branch")
 
     def __repr__(self):
-        return f"<Branch {self.id} {self.name}"
+        return f"<Branch {self.id} {self.name}>"
 
 
 class User(db.Model):
@@ -34,7 +34,7 @@ class User(db.Model):
     branch = db.relationship("Branch", back_populates="users")
 
     def __repr__(self):
-        return f"<User {self.id} {self.username} admin={self.is_admin}"
+        return f"<User {self.id} {self.username} admin={self.is_admin}>"
 
 
 class Stock(db.Model):
