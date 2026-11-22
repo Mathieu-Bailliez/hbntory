@@ -12,7 +12,6 @@ créer un programme en JavaScript qui devrait gérer une chaîne de caractères 
 **Alternative écartée :** l'authentification par jeton. Elle convient quand le client est
 une application JavaScript ou mobile qui appelle une API, ce qui n'est pas notre cas.
 
-
 ## 2. Mots de passe
 
 ### Mécanisme utilisé
@@ -22,6 +21,13 @@ Nous avons choisi Argon2id, la référence actuelle pour le hachage des mots de 
 ### Comment un mot de passe est haché
 
 **Le sel.** Avant le hachage, un sel est ajouté au mot de passe : une valeur aléatoire, différente pour chaque mot de passe. Deux utilisateurs qui ont le même mot de passe obtiennent donc des hashes différents. Sans sel, un pirate qui vole la base verrait quels comptes partagent un mot de passe, et retrouverait les mots de passe courants dans des tables précalculées (listes « mot de passe → hash » préparées à l'avance). Le sel n'est pas secret : il est stocké en clair dans la chaîne du hash, car il sert à la vérification.
+
+**Le coût.** Argon2id a trois réglages, écrits dans la chaîne du hash (`$argon2id$v=19$m=65536,t=3,p=4$<sel>$<empreinte>`) :
+- `m` : la mémoire utilisée par chaque calcul (65 536 Ko, soit 64 Mo) ;
+- `t` : le nombre de passages sur cette mémoire (3) ;
+- `p` : le nombre de calculs menés en parallèle (4).
+
+Ce sont les valeurs par défaut de `argon2-cffi`. Plus elles sont élevées, plus chaque essai coûte cher à un pirate. Comme elles sont stockées dans chaque hash, on peut les augmenter plus tard sans rendre les anciens hashes illisibles.
 
 ### Comment la vérification fonctionne
 
@@ -33,3 +39,11 @@ Le sel et les réglages sont visibles dans la base : la sécurité repose donc s
 - **En clair** : quiconque lit la base (fuite, sauvegarde volée) voit immédiatement tous les mots de passe. Beaucoup de gens les réutilisent ailleurs, donc la fuite touche aussi leurs autres comptes.
 - **SHA-256 seul** : c'est une fonction généraliste, conçue pour être rapide. Avec une carte graphique, un pirate qui a volé la base teste des milliards de mots de passe par seconde. Sans sel, il peut même utiliser des tables précalculées. Les mots de passe courants tombent presque immédiatement.
 - **Argon2id** : chaque essai coûte de la mémoire et du temps, et chaque compte a son propre sel. Le pirate doit attaquer compte par compte, très lentement.
+
+### Aucun secret affiché
+Ni le mot de passe ni son hash n'apparaissent en dehors de la base. Vérifié le 22/11 :
+- le `__repr__` de `User` (`backoffice/models.py`) affiche seulement `id`, `username` et `is_admin` ;
+- le code du Backoffice ne contient aucun `logging`, et le seul `print` (fin du seed) n'affiche aucune donnée ;
+- le formulaire de connexion n'est jamais affiché ni écrit dans les journaux.
+
+Les journaux sont moins protégés que la base : ils peuvent être copiés ou pris en capture d'écran. Un hash qui s'y trouverait permettrait à un pirate d'attaquer depuis chez lui, sans limite de temps.
