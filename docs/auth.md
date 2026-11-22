@@ -16,10 +16,20 @@ une application JavaScript ou mobile qui appelle une API, ce qui n'est pas notre
 ## 2. Mots de passe
 
 ### Mécanisme utilisé
+
 Nous avons choisi Argon2id, la référence actuelle pour le hachage des mots de passe (recommandé par l'OWASP). PBKDF2 et bcrypt utilisent très peu de mémoire : une carte graphique, qui teste énormément de mots de passe en parallèle, reste donc très efficace contre eux. Argon2id est volontairement lent et gourmand en mémoire, ce qui limite fortement l'avantage des cartes graphiques tout en restant rapide pour un utilisateur qui se connecte. Il est aussi simple à utiliser : le sel et les réglages sont gérés par la bibliothèque `argon2-cffi` (`backoffice/security.py`).
 
 ### Comment un mot de passe est haché
+
 **Le sel.** Avant le hachage, un sel est ajouté au mot de passe : une valeur aléatoire, différente pour chaque mot de passe. Deux utilisateurs qui ont le même mot de passe obtiennent donc des hashes différents. Sans sel, un pirate qui vole la base verrait quels comptes partagent un mot de passe, et retrouverait les mots de passe courants dans des tables précalculées (listes « mot de passe → hash » préparées à l'avance). Le sel n'est pas secret : il est stocké en clair dans la chaîne du hash, car il sert à la vérification.
 
 ### Comment la vérification fonctionne
+
 Un hash ne se « déchiffre » pas : on ne retrouve jamais le mot de passe à partir de lui. À la connexion, `verify_password` (`backoffice/security.py`) relit dans la chaîne stockée le sel et les réglages (`m`, `t`, `p`), hache le mot de passe saisi avec ces mêmes valeurs, puis compare le résultat à l'empreinte stockée. S'ils sont identiques, le mot de passe est correct. Sinon, la connexion est refusée avec le message générique « Identifiant ou mot de passe incorrect. ».
+
+### Pourquoi un mot de passe en clair ou SHA-256 seul ne suffit pas
+
+Le sel et les réglages sont visibles dans la base : la sécurité repose donc sur le coût de chaque essai.
+- **En clair** : quiconque lit la base (fuite, sauvegarde volée) voit immédiatement tous les mots de passe. Beaucoup de gens les réutilisent ailleurs, donc la fuite touche aussi leurs autres comptes.
+- **SHA-256 seul** : c'est une fonction généraliste, conçue pour être rapide. Avec une carte graphique, un pirate qui a volé la base teste des milliards de mots de passe par seconde. Sans sel, il peut même utiliser des tables précalculées. Les mots de passe courants tombent presque immédiatement.
+- **Argon2id** : chaque essai coûte de la mémoire et du temps, et chaque compte a son propre sel. Le pirate doit attaquer compte par compte, très lentement.
