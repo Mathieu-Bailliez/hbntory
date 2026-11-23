@@ -8,8 +8,10 @@ from models import User, db
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if session.get("user_id") is None:
+        user = _load_current_user()
+        if user is None:
             return redirect(url_for("login"))
+        g.user = user
         return view(*args, **kwargs)
     return wrapped
 
