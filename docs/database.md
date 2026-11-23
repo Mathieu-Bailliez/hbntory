@@ -230,3 +230,19 @@ Après ces deux essais, la quantité vaut toujours 10.
 ### Ce qui reste à coder
 Les vérifications côté Python (règles 1 à 4) sont écrites avec les fonctionnalités du Backoffice : ajout et retrait de stock (Tâche 4 §1), vérification du produit auprès de l'API (Tâche 4 §3).
 
+
+## 10. Compte en lecture seule du serveur MCP
+
+### Quoi
+Le serveur MCP se connecte avec son propre compte PostgreSQL, `mcp_readonly`. Il a le droit en lecture seule, donc `SELECT` uniquement, sur `branches` et `stock`. Le compte est créé par `db/init/02_mcp_readonly.sh` au premier démarrage de la base ; son mot de passe vient du `.env` (`MCP_DB_PASSWORD`), transmis au conteneur `bdd` par `docker-compose.yml`.
+
+### Pourquoi
+Le MCP n'a jamais le droit de voir les utilisateurs : un visiteur mal intentionné pourrait essayer de détourner l'IA et lui demander d'afficher des infos des utilisateurs, comme le nom, le `username` et surtout le `password_hash`. Et même si le code du MCP avait un bug, la base refuserait toute écriture.
+
+### Preuves (23/11)
+| Commande (compte `mcp_readonly`) | Résultat |
+|---|---|
+| `SELECT b.name, s.quantity FROM stock s JOIN branches b ON b.id = s.branch_id WHERE s.product_api_id = 15;` | ✔ Paris 10, Lyon 4 |
+| `UPDATE stock SET quantity = 0;` | ✘ `permission denied for table stock` |
+| `SELECT * FROM users;` | ✘ `permission denied for table users` |
+
