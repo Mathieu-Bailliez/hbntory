@@ -1,6 +1,7 @@
-from auth import login_required
+from flask import Flask, g, redirect, render_template, request, session, url_for
+
+from auth import admin_required, common_required, login_required
 from config import DATABASE_URL, SECRET_KEY
-from flask import Flask, redirect, render_template, request, session, url_for
 from models import User, db
 from security import verify_password
 
@@ -28,6 +29,20 @@ def login():
 def index():
     # Provisoire : vraie page d'accueil à la Tâche 4
     return f"Accueil — user_id en session : {session.get('user_id')} — <a href='/logout'>Se déconnecter</a>"
+
+
+@app.route("/admin/users")
+@admin_required
+def admin_users():
+    # Provisoire : vraie page à la Tâche 4 §2
+    return f"Gestion des utilisateurs (admin) — connecté : {g.user.username}"
+
+
+@app.route("/stock")
+@common_required
+def stock():
+    # Provisoire : vraie page à la Tâche 4 §1
+    return f"Stock de l'agence {g.user.branch_id} — connecté : {g.user.username}"
 
 
 @app.route("/logout")
