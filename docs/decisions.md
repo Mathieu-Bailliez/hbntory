@@ -12,8 +12,7 @@ Nous privilégions les options qui répondent au besoin du sujet sans complexit�
 **Contexte :** Le Backoffice est un outil interne utilisé par des employés
 authentifiés (un admin et des employés rattachés à une branche). Le sujet exige
 que les droits soient vérifiés côté serveur, et privilégie le fonctionnel plutôt
-que l'esthétique. Notre équipe est composée de deux personnes, et tous nos
-services sont écrits en Python.
+que l'esthétique. Notre équipe est composée de deux personnes, et le Backoffice est écrit en Python.
 
 **Option choisie :** Server-Side Rendering. Le serveur Flask génère les pages HTML
 complètes avec des templates Jinja.
@@ -69,30 +68,29 @@ reste du temps (voir mvp.md).
 notre serveur MCP. Le protocole MCP propose deux modes de transport : stdio (le
 service IA lance le serveur MCP comme sous-processus et dialogue avec lui
 directement) et Streamable HTTP (le serveur MCP est un service réseau
-indépendant). Le projet utilise déjà Docker Compose pour l'API Produits, la base
-de données, le Backoffice et le service IA. Nous sommes deux et voulons
-développer les composants en parallèle.
+indépendant). Le serveur MCP et le service IA sont tous les deux écrits en
+TypeScript, et le service IA est le seul utilisateur du serveur MCP.
 
-**Option choisie :** Streamable HTTP. Le serveur MCP tourne dans son propre
-conteneur et le service IA s'y connecte par son adresse réseau
-(par exemple `http://mcp:8001/mcp`).
+**Option choisie :** stdio. Le service IA lance le serveur MCP comme
+sous-processus, dans le même conteneur Node.js, et lui envoie ses demandes
+directement.
 
-**Bénéfice principal :** Le serveur MCP est un composant indépendant : il peut
-être développé, lancé et testé seul (avec MCP Inspector), avant même que l'agent
-existe. Chacun de nous peut donc avancer sans bloquer l'autre, et les erreurs
-du serveur MCP sont visibles dans ses propres journaux. Cela respecte aussi la
-séparation claire des composants demandée par le sujet.
+**Bénéfice principal :** C'est la solution la plus simple : aucun port, aucune
+adresse réseau et aucun ordre de démarrage à gérer. Comme les deux composants
+sont écrits en TypeScript, ils partagent un seul conteneur Node.js. Le serveur
+MCP reste testable seul avec MCP Inspector, qui sait lancer un serveur stdio.
 
-**Limite principale :** Un service de plus à déclarer dans Docker Compose, avec
-un port à configurer et un ordre de démarrage à respecter : le serveur MCP doit
-être prêt avant que le service IA l'appelle.
+**Limite principale :** Le serveur MCP n'est joignable que par le service IA qui
+l'a lancé, et un plantage du service IA l'arrête aussi. Ses messages de journal
+doivent passer par la sortie d'erreur (stderr), car la sortie standard est
+réservée au protocole MCP.
 
-**Alternative écartée :** stdio. Il évite toute configuration réseau et suffirait
-techniquement, puisque le service IA est le seul utilisateur du serveur MCP.
-Mais il mélange les deux composants dans le même conteneur, empêche de tester le
-serveur MCP seul et rend ses erreurs plus difficiles à voir. Avec la
-bibliothèque MCP Python, changer de transport ne demande qu'une ligne : ce
-choix reste réversible.
+**Alternative écartée :** Streamable HTTP. Il donnerait au serveur MCP son propre
+conteneur, joignable par une adresse réseau. Mais il demande d'ajouter un serveur
+HTTP au code, un port à configurer et un ordre de démarrage à respecter, sans
+bénéfice concret puisque le service IA est le seul utilisateur du serveur MCP.
+Le SDK MCP TypeScript propose les deux transports : ce choix reste réversible si
+un autre service devait un jour utiliser le serveur MCP.
 
 ---
 
@@ -119,7 +117,7 @@ contre un visiteur qui tenterait de détourner l'agent.
 Le serveur MCP doit avoir accès à la base de données, et si le schéma de la base
 change, ses outils doivent être mis à jour.
 
-**Alternative écartée :** MCP Toolbox for Databases. Elle demande moins de code
-Python, mais ajoute un outil à apprendre, à configurer et à faire tourner dans
+**Alternative écartée :** MCP Toolbox for Databases. Elle demande moins de code,
+mais ajoute un outil à apprendre, à configurer et à faire tourner dans
 Docker, ainsi qu'un deuxième serveur MCP à brancher sur l'agent. Mal configurée,
 elle pourrait aussi laisser l'IA exécuter des requêtes non prévues.
