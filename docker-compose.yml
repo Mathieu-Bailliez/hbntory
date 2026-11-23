@@ -11,5 +11,12 @@ services:
     ports:
       - "5432:5432"
 
+  external-products-api:
+    build: https://github.com/hbtn-edu/hbntory-products-api.git
+    environment:
+      HBN_PRODUCTS_PORT: "5000"
+    ports:
+      - "5001:5000"
+
 volumes:
   bdd_data:
