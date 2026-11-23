@@ -40,13 +40,14 @@ Détails : voir [docs/architecture.md](docs/architecture.md)
 
 | Technologie | Rôle dans le projet |
 |---|---|
-| Python | Langage utilisé pour tous les services |
+| Python | Langage du Backoffice |
+| TypeScript (Node.js) | Langage du serveur MCP et du service IA |
 | Flask + Jinja2 | Backoffice : le serveur fabrique les pages HTML (SSR) |
 | PostgreSQL | Base de données centrale : employés, magasins, stocks |
-| SQLAlchemy | Accès à la base de données depuis Python |
+| SQLAlchemy | Accès à la base de données depuis le Backoffice |
 | Docker + Docker Compose | Lancement de tous les services en une seule commande |
-| MCP (SDK Python) | Serveur qui donne à l'IA un accès contrôlé aux produits et au stock |
-| Google ADK + LiteLLM | *Proposition* : agents IA et connexion au modèle |
+| MCP (SDK TypeScript) | Serveur qui donne à l'IA un accès contrôlé aux produits et au stock (transport stdio) |
+| Agents IA | *À confirmer* : bibliothèque TypeScript choisie pour le service IA |
 | LLM | *Proposition* : Groq (offre gratuite) ou Ollama en local, configurable dans le `.env` |
 
 Les choix marqués *Proposition* seront confirmés pendant le développement du service IA.
