@@ -33,7 +33,7 @@ flowchart LR
 - **Ne fait pas :** stocker des données produits, contenir de l'IA.
 - **Communique avec :** la base de données (SQLAlchemy) et l'API Produits (HTTP,
   pour afficher les noms de produits).
-- **Technologie :** FastAPI.
+- **Technologie :** Flask (Python), pages générées côté serveur avec Jinja (décision 1).
 
 ### 2.2 Base de données
 - **Rôle :** stocker les données locales (voir section 4).
@@ -50,11 +50,14 @@ flowchart LR
 - **Outils stock :** requêtes prédéfinies en lecture seule (stock d'un produit par
   succursale, produits d'une succursale).
 - **Ne fait pas :** exécuter du SQL libre, écrire dans la base.
+- **Technologie :** TypeScript (Node.js), SDK MCP officiel.
+- **Transport :** stdio : le service IA lance le serveur MCP et lui parle directement (décision 3).
 
 ### 2.5 Service IA
 - **Rôle :** recevoir une question, laisser l'agent choisir les outils MCP à
   appeler, renvoyer une réponse.
 - **Indépendant du Backoffice :** conteneur et code séparés.
+- **Technologie :** TypeScript (Node.js). Il lance le serveur MCP comme sous-programme, dans le même conteneur.
 - **Règle anti-hallucination :** si les outils ne fournissent pas l'information,
   l'agent doit répondre que l'information n'est pas disponible.
 
@@ -71,7 +74,7 @@ flowchart LR
 | Backoffice | Base de données | SQLAlchemy | Lecture/écriture des données locales |
 | Backoffice | API Produits | HTTP | Récupérer les noms de produits |
 | Client web | Service IA | REST | Questions indépendantes (voir decisions.md) |
-| Service IA | Serveur MCP | MCP | Accès aux outils (voir decisions.md) |
+| Service IA | Serveur MCP | MCP (stdio) | Accès aux outils (voir décision 3) |
 | Serveur MCP | API Produits | HTTP | Récupérer les données produits |
 | Serveur MCP | Base de données | SQL (lecture seule) | Consulter le stock |
 
@@ -99,5 +102,6 @@ Nom, description, prix, images, métadonnées : tout ce qui décrit un produit.
 
 ## 6. Déploiement
 
-Un conteneur par composant, orchestrés par `docker-compose.yml` :
-backoffice, ai_service, product_mcp_server, client_web, postgres, product_api.
+Orchestration par `docker-compose.yml` :
+- un conteneur par composant : backoffice, client_web, postgres, product_api ;
+- un conteneur commun pour ai_service et product_mcp_server : avec le transport stdio, le service IA lance lui-même le serveur MCP (décision 3).
