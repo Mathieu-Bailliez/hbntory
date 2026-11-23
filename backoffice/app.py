@@ -3,6 +3,7 @@ from config import DATABASE_URL, SECRET_KEY
 from flask import Flask, flash, g, redirect, render_template, request, session, url_for
 from models import Stock, User, db
 from security import verify_password
+from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
@@ -68,6 +69,32 @@ def stock_add():
         db.session.add(Stock(branch_id=branch_id, product_api_id=product_api_id, quantity=quantity))  # étape 6
     db.session.commit()                                                    # étape 7
     flash(f"Ajouté : {quantity} du produit {product_api_id}.")
+    return redirect(url_for("stock"))
+
+
+@app.route("/stock/remove", methods=["POST"])
+@common_required
+def stock_remove():
+    product_api_id = _positive_int(request.form.get("product_api_id"))
+    quantity = _positive_int(request.form.get("quantity"))
+    if product_api_id is None or quantity is None:
+        flash("Le produit et la quantité doivent être des nombres entiers positifs.")
+        return redirect(url_for("stock"))
+    item = Stock.query.filter_by(branch_id=g.user.branch_id, product_api_id=product_api_id).first()
+    if item is None:                                   # refus 1 : la ligne n'existe pas
+        flash(f"Le produit {product_api_id} n'est pas en stock dans votre agence.")
+        return redirect(url_for("stock"))
+    if quantity > item.quantity:                       # refus 2 : pas assez de stock
+        flash(f"Impossible de retirer {quantity} : il n'en reste que {item.quantity}.")
+        return redirect(url_for("stock"))
+    item.quantity = item.quantity - quantity
+    try:
+        db.session.commit()
+    except IntegrityError:                             # dernier rempart : la base refuse
+        db.session.rollback()
+        flash("Opération refusée par la base de données : le stock n'a pas changé.")
+        return redirect(url_for("stock"))
+    flash(f"Retiré : {quantity} du produit {product_api_id}.")
     return redirect(url_for("stock"))
 
 
