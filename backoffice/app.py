@@ -2,7 +2,7 @@ from flask import Flask, g, redirect, render_template, request, session, url_for
 
 from auth import admin_required, common_required, login_required
 from config import DATABASE_URL, SECRET_KEY
-from models import User, db
+from models import Stock, User, db
 from security import verify_password
 
 app = Flask(__name__)
@@ -41,8 +41,8 @@ def admin_users():
 @app.route("/stock")
 @common_required
 def stock():
-    # Provisoire : vraie page à la Tâche 4 §1
-    return f"Stock de l'agence {g.user.branch_id} — connecté : {g.user.username}"
+    items = Stock.query.filter_by(branch_id=g.user.branch_id).all()
+    return render_template("stock.html", branch=g.user.branch, items=items)
 
 
 @app.route("/logout")

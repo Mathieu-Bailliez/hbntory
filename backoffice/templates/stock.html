@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Stock - HBntory Backoffice</title>
+</head>
+<body>
+  <p>Connecté : {{ g.user.username }} — <a href="/logout">Se déconnecter</a></p>
+  <h1>Stock de l'agence {{ branch.name }}</h1>
+  {% if items %}
+    <table>
+      <tr><th>Produit (identifiant API)</th><th>Quantité</th></tr>
+      {% for item in items %}
+        <tr><td>{{ item.product_api_id }}</td><td>{{ item.quantity }}</td></tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>Aucun produit en stock dans cette agence.</p>
+  {% endif %}
+</body>
+</html>
