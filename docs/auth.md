@@ -47,3 +47,30 @@ Ni le mot de passe ni son hash n'apparaissent en dehors de la base. Vérifié le
 - le formulaire de connexion n'est jamais affiché ni écrit dans les journaux.
 
 Les journaux sont moins protégés que la base : ils peuvent être copiés ou pris en capture d'écran. Un hash qui s'y trouverait permettrait à un pirate d'attaquer depuis chez lui, sans limite de temps.
+
+
+## 3. Autorisation
+
+### Authentification et autorisation
+L'authentification vérifie **qui** est l'utilisateur (section 1). L'autorisation vérifie s'il a **le droit** de faire une action, selon son rôle (`is_admin`). Un visiteur non connecté est redirigé vers `/login`. Un utilisateur connecté qui n'a pas le droit reçoit une erreur 403.
+
+### Règles appliquées
+| Rôle | Gestion des utilisateurs | Opérations de stock |
+|---|---|---|
+| Admin | Autorisé | Refusé (403) |
+| Commun | Refusé (403) | Autorisé, uniquement pour son agence |
+
+### Mise en œuvre côté serveur
+Cacher un bouton ou un champ ne protège rien : une requête peut être envoyée directement (adresse tapée à la main, `curl`, champ modifié avec l'inspecteur du navigateur). Les règles sont donc appliquées dans le code du serveur :
+- `backoffice/auth.py` : décorateurs `admin_required` et `common_required`. À chaque requête, ils rechargent l'utilisateur depuis la base (un compte supprimé est déconnecté immédiatement), refusent avec `abort(403)` si le rôle ne convient pas, puis rangent l'utilisateur dans `g.user` pour la route.
+- L'agence est toujours lue dans le compte (`g.user.branch_id`), jamais dans la requête (`request.form`, `request.args`).
+- `@app.route` est toujours placé au-dessus du décorateur de protection : dans l'autre ordre, Flask enregistrerait la fonction non protégée.
+
+### Tests manuels (23/11)
+| # | Utilisateur | Adresse | Résultat |
+|---|---|---|---|
+| 1 | bruno (commun) | `/stock` | ✔ page de son agence |
+| 2 | bruno (commun) | `/admin/users` | ✔ 403 |
+| 3 | admin | `/admin/users` | ✔ page admin |
+| 4 | admin | `/stock` | ✔ 403 |
+| 5 | visiteur anonyme | `/stock` | ✔ redirigé vers `/login` |
