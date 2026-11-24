@@ -8,6 +8,10 @@
   <p>Connecté : {{ g.user.username }} — <a href="/logout">Se déconnecter</a></p>
   <h1>Stock de l'agence {{ branch.name }}</h1>
 
+  {% if api_error %}
+    <p><strong>{{ api_error }}</strong></p>
+  {% endif %}
+
   {% for message in get_flashed_messages() %}
     <p><strong>{{ message }}</strong></p>
   {% endfor %}
@@ -33,9 +37,9 @@
   <h2>Stock actuel</h2>
   {% if items %}
     <table>
-      <tr><th>Produit (identifiant API)</th><th>Quantité</th></tr>
+      <tr><th>Produit (identifiant API)</th><th>Nom (API Produits)</th><th>Quantité</th></tr>
       {% for item in items %}
-        <tr><td>{{ item.product_api_id }}</td><td>{{ item.quantity }}</td></tr>
+        <tr><td>{{ item.product_api_id }}</td><td>{{ names.get(item.product_api_id, "—") }}</td><td>{{ item.quantity }}</td></tr>
       {% endfor %}
     </table>
   {% else %}
