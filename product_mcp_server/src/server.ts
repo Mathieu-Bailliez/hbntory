@@ -1,4 +1,3 @@
-import { transformProductList } from "./products.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
@@ -19,6 +18,8 @@ const server = new McpServer({
 
 // Préparation d'une réponse d'erreur MCP
 function apiError(code: string, message: string) {
+  console.error(`[MCP ERROR] ${code}: ${message}`);
+
   return {
     isError: true,
     content: [
@@ -30,33 +31,88 @@ function apiError(code: string, message: string) {
   };
 }
 
-// Appel HTTP à la Product API
+// Appel HTTP sécurisé à la Product API
 async function fetchApi(path: string) {
-  try {
-    const response = await fetch(
-      `${config.productApiBaseUrl}${path}`,
-      { signal: AbortSignal.timeout(10000) }
-    );
+  let response: Response;
 
-    if (!response.ok) {
+  // Gestion des erreurs de connexion et des timeouts
+  try {
+    response = await fetch(
+      `${config.productApiBaseUrl}${path}`,
+      {
+        signal: AbortSignal.timeout(10000),
+      }
+    );
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.name === "TimeoutError" || error.name === "AbortError")
+    ) {
       return {
         error: apiError(
-          response.status === 404 ? "PRODUCT_NOT_FOUND" : "API_UNAVAILABLE",
-          `La Product API a répondu avec le statut ${response.status}.`
+          "API_TIMEOUT",
+          "La Product API n'a pas répondu dans les 10 secondes."
         ),
       };
     }
 
-    return { data: await response.json() };
-  } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
+    console.error("[API CONNECTION ERROR]", error);
+
+    return {
+      error: apiError(
+        "API_UNAVAILABLE",
+        "Impossible de se connecter à la Product API. Vérifiez sa disponibilité."
+      ),
+    };
+  }
+
+  // Gestion des réponses HTTP en erreur
+  if (!response.ok) {
+    console.error(
+      `[API HTTP ERROR] ${response.status} ${response.statusText} - ${path}`
+    );
+
+    if (
+      response.status === 404 &&
+      path.startsWith("/api/v1/products/")
+    ) {
       return {
-        error: apiError("API_TIMEOUT", "La Product API ne répond pas dans le délai imparti."),
+        error: apiError(
+          "PRODUCT_NOT_FOUND",
+          "Le produit demandé n'existe pas."
+        ),
+      };
+    }
+
+    if (response.status >= 500) {
+      return {
+        error: apiError(
+          "API_UNAVAILABLE",
+          `La Product API rencontre une erreur serveur (${response.status}).`
+        ),
       };
     }
 
     return {
-      error: apiError("API_UNAVAILABLE", "Impossible de contacter la Product API."),
+      error: apiError(
+        "API_HTTP_ERROR",
+        `La Product API a retourné une erreur HTTP ${response.status}.`
+      ),
+    };
+  }
+
+  // Vérification du JSON retourné
+  try {
+    const data = await response.json();
+    return { data };
+  } catch (error) {
+    console.error("[API JSON ERROR]", error);
+
+    return {
+      error: apiError(
+        "UNEXPECTED_RESPONSE",
+        "La Product API a retourné une réponse JSON invalide."
+      ),
     };
   }
 }
@@ -69,7 +125,7 @@ function transformProduct(product: any) {
     ...(product.description !== undefined && {
       description: product.description,
     }),
-    price: Number(product.price),
+    price: Number(product.unit_price),
     ...(product.currency !== undefined && {
       currency: product.currency,
     }),
@@ -86,15 +142,13 @@ server.registerTool(
     outputSchema: ListProductsOutput.shape,
   },
   async () => {
-    const result = await fetchApi("/products");
+    const result = await fetchApi("/api/v1/products");
 
     if (result.error) {
       return result.error;
     }
 
-    const products = Array.isArray(result.data)
-      ? result.data
-      : result.data.products;
+    const products = result.data.results;
 
     if (!Array.isArray(products)) {
       return apiError(
@@ -103,7 +157,12 @@ server.registerTool(
       );
     }
 
-    const output = transformProductList(products);
+    const formattedProducts = products.map(transformProduct);
+
+    const output = {
+      products: formattedProducts,
+      count: formattedProducts.length,
+    };
 
     return {
       content: [
@@ -137,15 +196,23 @@ server.registerTool(
       );
     }
 
-    const result = await fetchApi(`/products/${encodeURIComponent(id)}`);
+    const result = await fetchApi(
+      `/api/v1/products/${encodeURIComponent(id)}`
+    );
 
     if (result.error) {
       return result.error;
     }
 
-    const product = result.data.product ?? result.data;
+    const product = result.data;
 
-    if (!product || product.id === undefined) {
+    if (
+      !product ||
+      typeof product !== "object" ||
+      product.id === undefined ||
+      product.name === undefined ||
+      product.unit_price === undefined
+    ) {
       return apiError(
         "UNEXPECTED_RESPONSE",
         "La réponse de la Product API ne contient pas de produit valide."
