@@ -1,15 +1,21 @@
 {
-  "name": "product-mcp-server",
+  "name": "product_mcp_server",
   "version": "1.0.0",
-  "private": true,
+  "description": "Product MCP Server",
   "type": "module",
+  "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
+    "start": "node dist/server.js",
     "dev": "tsx src/server.ts",
-    "start": "node dist/server.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
+    "dotenv": "^17.4.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {
