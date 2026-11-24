@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Produit exposé à l'agent (uniquement le nécessaire)
+// Structure d'un produit
 export const ProductSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -9,7 +9,7 @@ export const ProductSchema = z.object({
   currency: z.string().optional(),
 });
 
-// Format d'erreur commun aux deux outils
+// Format commun des erreurs
 export const ErrorSchema = z.object({
   code: z.enum([
     "INVALID_INPUT",
@@ -17,21 +17,30 @@ export const ErrorSchema = z.object({
     "API_UNAVAILABLE",
     "API_TIMEOUT",
     "UNEXPECTED_RESPONSE",
+    "NOT_IMPLEMENTED",
   ]),
   message: z.string(),
 });
 
-// list_products
-export const ListProductsInput = {};
-export const ListProductsOutput = {
+// Entrée de list_products
+export const ListProductsInput = z.object({});
+
+// Sortie de list_products
+export const ListProductsOutput = z.object({
   products: z.array(ProductSchema),
   count: z.number(),
-};
+});
 
-// get_product
-export const GetProductInput = {
-  product_id: z.string().min(1).describe("Identifiant unique du produit"),
-};
-export const GetProductOutput = {
+// Entrée de get_product
+export const GetProductInput = z.object({
+  product_id: z
+    .string()
+    .trim()
+    .min(1)
+    .describe("Identifiant unique du produit"),
+});
+
+// Sortie de get_product
+export const GetProductOutput = z.object({
   product: ProductSchema,
-};
+});
