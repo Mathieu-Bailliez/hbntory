@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Stock - HBntory Backoffice</title>
+</head>
+<body>
+  <p>Connecté : {{ g.user.username }} — <a href="/logout">Se déconnecter</a></p>
+  <h1>Stock de l'agence {{ branch.name }}</h1>
+
+  {% for message in get_flashed_messages() %}
+    <p><strong>{{ message }}</strong></p>
+  {% endfor %}
+
+  <h2>Ajouter du stock</h2>
+  <form method="post" action="{{ url_for('stock_add') }}">
+    <label for="add_product">Produit (identifiant API)</label>
+    <input type="number" id="add_product" name="product_api_id" min="1" step="1" required>
+    <label for="add_quantity">Quantité</label>
+    <input type="number" id="add_quantity" name="quantity" min="1" step="1" required>
+    <button type="submit">Ajouter</button>
+  </form>
+
+  <h2>Retirer du stock</h2>
+  <form method="post" action="{{ url_for('stock_remove') }}">
+    <label for="remove_product">Produit (identifiant API)</label>
+    <input type="number" id="remove_product" name="product_api_id" min="1" step="1" required>
+    <label for="remove_quantity">Quantité</label>
+    <input type="number" id="remove_quantity" name="quantity" min="1" step="1" required>
+    <button type="submit">Retirer</button>
+  </form>
+
+  <h2>Stock actuel</h2>
+  {% if items %}
+    <table>
+      <tr><th>Produit (identifiant API)</th><th>Quantité</th></tr>
+      {% for item in items %}
+        <tr><td>{{ item.product_api_id }}</td><td>{{ item.quantity }}</td></tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>Aucun produit en stock dans cette agence.</p>
+  {% endif %}
+</body>
+</html>
