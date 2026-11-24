@@ -55,8 +55,10 @@ def login():
 @app.route("/")
 @login_required
 def index():
-    # Provisoire : vraie page d'accueil à la Tâche 4
-    return f"Accueil — user_id en session : {session.get('user_id')} — <a href='/logout'>Se déconnecter</a>"
+    if g.user.is_admin:
+        return redirect(url_for("admin_users"))
+    else:
+        return redirect(url_for("stock"))
 
 
 @app.route("/admin/users")
