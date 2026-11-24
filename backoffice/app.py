@@ -2,6 +2,7 @@ from auth import admin_required, common_required, login_required
 from config import DATABASE_URL, SECRET_KEY
 from flask import Flask, flash, g, redirect, render_template, request, session, url_for
 from models import Stock, User, db
+from products import ProductApiError, get_product, get_product_names
 from security import verify_password
 from sqlalchemy.exc import IntegrityError
 
@@ -51,7 +52,13 @@ def admin_users():
 @common_required
 def stock():
     items = Stock.query.filter_by(branch_id=g.user.branch_id).all()
-    return render_template("stock.html", branch=g.user.branch, items=items)
+    names = {}
+    api_error = None
+    try:
+        names = get_product_names()                    # un seul appel pour tout le tableau
+    except ProductApiError as error:
+        api_error = f"{error} Les noms des produits ne peuvent pas être affichés."
+    return render_template("stock.html", branch=g.user.branch, items=items, names=names, api_error=api_error)
 
 
 @app.route("/stock/add", methods=["POST"])
@@ -62,6 +69,17 @@ def stock_add():
     if product_api_id is None or quantity is None:                         # étape 2
         flash("Le produit et la quantité doivent être des nombres entiers positifs.")
         return redirect(url_for("stock"))
+    try:                                                                   # règle 4 : le produit existe-t-il ?
+        product = get_product(product_api_id)
+    except ProductApiError as error:
+        flash(f"{error} Ajout impossible pour le moment.")
+        return redirect(url_for("stock"))
+    if product is None:
+        flash(f"Le produit {product_api_id} n'existe pas dans le catalogue.")
+        return redirect(url_for("stock"))
+    if product["discontinued"]:
+        flash(f"Le produit {product_api_id} ({product['name']}) n'est plus commercialisé : ajout refusé.")
+        return redirect(url_for("stock"))
     branch_id = g.user.branch_id                                           # étape 3
     item = Stock.query.filter_by(branch_id=branch_id, product_api_id=product_api_id).first()  # étape 4
     if item is not None:
@@ -69,7 +87,7 @@ def stock_add():
     else:
         db.session.add(Stock(branch_id=branch_id, product_api_id=product_api_id, quantity=quantity))  # étape 6
     db.session.commit()                                                    # étape 7
-    flash(f"Ajouté : {quantity} du produit {product_api_id}.")
+    flash(f"Ajouté : {quantity} × {product['name']} (produit {product_api_id}).")
     return redirect(url_for("stock"))
 
 
