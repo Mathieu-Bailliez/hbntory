@@ -1,9 +1,19 @@
 from auth import admin_required, common_required, login_required
 from config import DATABASE_URL, SECRET_KEY
-from flask import Flask, flash, g, redirect, render_template, request, session, url_for
-from models import Stock, User, db
+from flask import (
+    Flask,
+    abort,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from models import Branch, Stock, User, db
 from products import ProductApiError, get_product, get_product_names
-from security import verify_password
+from security import hash_password, verify_password
 from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
@@ -19,6 +29,14 @@ def _positive_int(value):
         return None
     number = int(value)
     return number if number > 0 else None
+
+
+def _get_common_user(user_id):
+    """Renvoie l'employé, ou None s'il n'existe pas ou si c'est l'admin."""
+    user = db.session.get(User, user_id)
+    if user is None or user.is_admin:
+        return None
+    return user
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -44,8 +62,80 @@ def index():
 @app.route("/admin/users")
 @admin_required
 def admin_users():
-    # Provisoire : vraie page à la Tâche 4 §2
-    return f"Gestion des utilisateurs (admin) — connecté : {g.user.username}"
+    users = User.query.filter_by(is_admin=False).order_by(User.username).all()
+    branches = Branch.query.order_by(Branch.name).all()
+    return render_template("admin_users.html", users=users, branches=branches)
+
+
+@app.route("/admin/users/new", methods=["POST"])
+@admin_required
+def admin_user_create():
+    name = request.form.get("name", "").strip()
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+    branch = db.session.get(Branch, _positive_int(request.form.get("branch_id")) or 0)
+    if not name or not username or len(password) < 8 or branch is None:
+        flash("Nom, identifiant, mot de passe (8 caractères minimum) et agence sont obligatoires.")
+        return redirect(url_for("admin_users"))
+    if User.query.filter_by(username=username).first() is not None:
+        flash(f"L'identifiant « {username} » est déjà pris.")
+        return redirect(url_for("admin_users"))
+    db.session.add(User(name=name, username=username, password_hash=hash_password(password),
+                        is_admin=False, branch_id=branch.id))
+    db.session.commit()
+    flash(f"Employé « {username} » créé dans l'agence {branch.name}.")
+    return redirect(url_for("admin_users"))
+
+@app.route("/admin/users/<int:user_id>/update", methods=["POST"])
+@admin_required
+def admin_user_update(user_id):
+    user = _get_common_user(user_id)
+    if user is None:
+        abort(404)
+    name = request.form.get("name", "").strip()
+    username = request.form.get("username", "").strip()
+    branch = db.session.get(Branch, _positive_int(request.form.get("branch_id")) or 0)
+    if not name or not username or branch is None:
+        flash("Nom, identifiant et agence sont obligatoires.")
+        return redirect(url_for("admin_users"))
+    other = User.query.filter_by(username=username).first()
+    if other is not None and other.id != user.id:
+        flash(f"L'identifiant « {username} » est déjà pris.")
+        return redirect(url_for("admin_users"))
+    user.name = name
+    user.username = username
+    user.branch_id = branch.id
+    db.session.commit()
+    flash(f"Employé « {username} » modifié (agence : {branch.name}).")
+    return redirect(url_for("admin_users"))
+
+
+@app.route("/admin/users/<int:user_id>/password", methods=["POST"])
+@admin_required
+def admin_user_password(user_id):
+    user = _get_common_user(user_id)
+    if user is None:
+        abort(404)
+    password = request.form.get("password", "")
+    if len(password) < 8:
+        flash("Le mot de passe doit faire au moins 8 caractères.")
+        return redirect(url_for("admin_users"))
+    user.password_hash = hash_password(password)
+    db.session.commit()
+    flash(f"Mot de passe de « {user.username} » changé.")
+    return redirect(url_for("admin_users"))
+
+
+@app.route("/admin/users/<int:user_id>/delete", methods=["POST"])
+@admin_required
+def admin_user_delete(user_id):
+    user = _get_common_user(user_id)
+    if user is None:
+        abort(404)
+    user.is_deleted = True
+    db.session.commit()
+    flash(f"Employé « {user.username} » supprimé : il ne peut plus se connecter. Le stock de son agence est conservé.")
+    return redirect(url_for("admin_users"))
 
 
 @app.route("/stock")

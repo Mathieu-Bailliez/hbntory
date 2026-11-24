@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Utilisateurs - HBntory Backoffice</title>
+  <style>
+    table { border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 4px 8px; }
+    form { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <p>Connecté : {{ g.user.username }} (admin) — <a href="/logout">Se déconnecter</a></p>
+  <h1>Gestion des utilisateurs</h1>
+
+  {% for message in get_flashed_messages() %}
+    <p><strong>{{ message }}</strong></p>
+  {% endfor %}
+
+  <h2>Nouvel employé</h2>
+  <form method="post" action="{{ url_for('admin_user_create') }}">
+    <label for="new_name">Nom</label> <input id="new_name" name="name" required>
+    <label for="new_username">Identifiant</label> <input id="new_username" name="username" required>
+    <label for="new_password">Mot de passe</label> <input id="new_password" name="password" type="password" minlength="8" required>
+    <label for="new_branch">Agence</label>
+    <select id="new_branch" name="branch_id" required>
+      {% for branch in branches %}<option value="{{ branch.id }}">{{ branch.name }}</option>{% endfor %}
+    </select>
+    <button type="submit">Créer</button>
+  </form>
+
+  <h2>Employés</h2>
+  <table>
+    <tr><th>Nom</th><th>Identifiant</th><th>Agence</th><th>Statut</th><th>Modifier</th><th>Mot de passe</th><th>Supprimer</th></tr>
+    {% for user in users %}
+      <tr>
+        <td>{{ user.name }}</td>
+        <td>{{ user.username }}</td>
+        <td>{{ user.branch.name }}</td>
+        <td>{{ "Supprimé" if user.is_deleted else "Actif" }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin_user_update', user_id=user.id) }}">
+            <input name="name" value="{{ user.name }}" required>
+            <input name="username" value="{{ user.username }}" required>
+            <select name="branch_id">
+              {% for branch in branches %}
+                <option value="{{ branch.id }}" {% if branch.id == user.branch_id %}selected{% endif %}>{{ branch.name }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit">Enregistrer</button>
+          </form>
+        </td>
+        <td>
+          <form method="post" action="{{ url_for('admin_user_password', user_id=user.id) }}">
+            <input name="password" type="password" minlength="8" placeholder="Nouveau mot de passe" required>
+            <button type="submit">Changer</button>
+          </form>
+        </td>
+        <td>
+          {% if not user.is_deleted %}
+            <form method="post" action="{{ url_for('admin_user_delete', user_id=user.id) }}">
+              <button type="submit">Supprimer</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>
