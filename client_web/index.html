@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Trouvez les produits disponibles dans les agences HBntory grâce à notre assistant intelligent.">
+    <title>HBntory - Assistant produits</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+
+    <header class="header">
+        <a href="#" class="logo">HB<span>ntory</span></a>
+        <span class="header-status">
+            <span class="status-dot"></span>
+            Assistant disponible
+        </span>
+    </header>
+
+    <main class="main-container">
+
+        <section class="hero">
+            <div class="hero-label">ASSISTANT INTELLIGENT</div>
+
+            <h1>Trouvez vos produits.<br>
+                <span>Simplement.</span>
+            </h1>
+
+            <p>
+                Posez votre question et découvrez dans quelles agences
+                vos produits sont disponibles grâce à notre assistant IA.
+            </p>
+        </section>
+
+        <section class="assistant-card">
+
+            <div class="assistant-heading">
+                <div class="assistant-icon">H</div>
+                <div>
+                    <h2>Assistant HBntory</h2>
+                    <p>Je suis là pour vous aider.</p>
+                </div>
+            </div>
+
+            <form id="question-form">
+
+                <label for="question">Votre question</label>
+
+                <textarea
+                    id="question"
+                    name="question"
+                    placeholder="Exemple : Dans quelles agences se trouve le produit 15 ?"
+                    rows="3"
+                    maxlength="1000"
+                    required
+                ></textarea>
+
+                <div class="form-footer">
+                    <span>Jusqu'à 1000 caractères</span>
+                    <button type="submit" id="submit-button">
+                        <span id="button-text">Envoyer ma question</span>
+                        <span aria-hidden="true">→</span>
+                    </button>
+                </div>
+
+            </form>
+
+            <div id="loading" class="loading hidden" aria-live="polite">
+                <span class="loader"></span>
+                <span>Votre assistant réfléchit...</span>
+            </div>
+
+            <div id="error-message" class="error-message hidden" role="alert"></div>
+
+            <section id="answer-section" class="answer-section hidden" aria-live="polite">
+                <div class="answer-heading">
+                    <span class="answer-icon">✦</span>
+                    <h3>Réponse de votre assistant</h3>
+                </div>
+
+                <div id="answer-content" class="answer-content"></div>
+            </section>
+
+        </section>
+
+        <section class="suggestions">
+            <h3>Besoin d'inspiration ?</h3>
+
+            <div class="suggestion-list">
+                <button class="suggestion" data-question="Dans quelles agences se trouve le produit 15 ?">
+                    Où trouver le produit 15 ?
+                </button>
+
+                <button class="suggestion" data-question="Quels produits sont disponibles à Paris ?">
+                    Quels produits à Paris ?
+                </button>
+
+                <button class="suggestion" data-question="Combien d'unités du produit 15 sont disponibles à Lyon ?">
+                    Stock du produit 15 à Lyon ?
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <p>© 2026 HBntory - Gestion intelligente des stocks</p>
+        <p>Une question ? Notre assistant vous répond.</p>
+    </footer>
+
+</body>
+</html>
