@@ -11,7 +11,6 @@ from flask import (
     session,
     url_for,
 )
-from flask_migrate import Migrate
 from models import Branch, Stock, User, db
 from products import ProductApiError, get_product, get_product_names
 from security import hash_password, verify_password
@@ -21,9 +20,7 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SECRET_KEY"] = SECRET_KEY
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-
 db.init_app(app)
-migrate = Migrate(app, db)
 
 
 def _positive_int(value):
@@ -49,10 +46,7 @@ def login():
         password = request.form["password"]
         user = User.query.filter_by(username=username).first()
         if user is None or not verify_password(user.password_hash, password) or user.is_deleted:
-            return render_template(
-                "login.html",
-                error="Identifiant ou mot de passe incorrect."
-            )
+            return render_template("login.html", error="Identifiant ou mot de passe incorrect.")
         session["user_id"] = user.id
         return redirect(url_for("index"))
     return render_template("login.html")
@@ -81,35 +75,18 @@ def admin_user_create():
     name = request.form.get("name", "").strip()
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
-    branch = db.session.get(
-        Branch,
-        _positive_int(request.form.get("branch_id")) or 0
-    )
-
+    branch = db.session.get(Branch, _positive_int(request.form.get("branch_id")) or 0)
     if not name or not username or len(password) < 8 or branch is None:
-        flash(
-            "Nom, identifiant, mot de passe (8 caractères minimum) "
-            "et agence sont obligatoires."
-        )
+        flash("Nom, identifiant, mot de passe (8 caractères minimum) et agence sont obligatoires.")
         return redirect(url_for("admin_users"))
-
     if User.query.filter_by(username=username).first() is not None:
         flash(f"L'identifiant « {username} » est déjà pris.")
         return redirect(url_for("admin_users"))
-
-    db.session.add(
-        User(
-            name=name,
-            username=username,
-            password_hash=hash_password(password),
-            is_admin=False,
-            branch_id=branch.id
-        )
-    )
+    db.session.add(User(name=name, username=username, password_hash=hash_password(password),
+                        is_admin=False, branch_id=branch.id))
     db.session.commit()
     flash(f"Employé « {username} » créé dans l'agence {branch.name}.")
     return redirect(url_for("admin_users"))
-
 
 @app.route("/admin/users/<int:user_id>/update", methods=["POST"])
 @admin_required
@@ -117,28 +94,20 @@ def admin_user_update(user_id):
     user = _get_common_user(user_id)
     if user is None:
         abort(404)
-
     name = request.form.get("name", "").strip()
     username = request.form.get("username", "").strip()
-    branch = db.session.get(
-        Branch,
-        _positive_int(request.form.get("branch_id")) or 0
-    )
-
+    branch = db.session.get(Branch, _positive_int(request.form.get("branch_id")) or 0)
     if not name or not username or branch is None:
         flash("Nom, identifiant et agence sont obligatoires.")
         return redirect(url_for("admin_users"))
-
     other = User.query.filter_by(username=username).first()
     if other is not None and other.id != user.id:
         flash(f"L'identifiant « {username} » est déjà pris.")
         return redirect(url_for("admin_users"))
-
     user.name = name
     user.username = username
     user.branch_id = branch.id
     db.session.commit()
-
     flash(f"Employé « {username} » modifié (agence : {branch.name}).")
     return redirect(url_for("admin_users"))
 
@@ -149,15 +118,12 @@ def admin_user_password(user_id):
     user = _get_common_user(user_id)
     if user is None:
         abort(404)
-
     password = request.form.get("password", "")
     if len(password) < 8:
         flash("Le mot de passe doit faire au moins 8 caractères.")
         return redirect(url_for("admin_users"))
-
     user.password_hash = hash_password(password)
     db.session.commit()
-
     flash(f"Mot de passe de « {user.username} » changé.")
     return redirect(url_for("admin_users"))
 
@@ -168,14 +134,9 @@ def admin_user_delete(user_id):
     user = _get_common_user(user_id)
     if user is None:
         abort(404)
-
     user.is_deleted = True
     db.session.commit()
-
-    flash(
-        f"Employé « {user.username} » supprimé : il ne peut plus se connecter. "
-        "Le stock de son agence est conservé."
-    )
+    flash(f"Employé « {user.username} » supprimé : il ne peut plus se connecter. Le stock de son agence est conservé.")
     return redirect(url_for("admin_users"))
 
 
@@ -185,66 +146,39 @@ def stock():
     items = Stock.query.filter_by(branch_id=g.user.branch_id).all()
     names = {}
     api_error = None
-
     try:
-        names = get_product_names()
+        names = get_product_names()                    # un seul appel pour tout le tableau
     except ProductApiError as error:
         api_error = f"{error} Les noms des produits ne peuvent pas être affichés."
-
-    return render_template(
-        "stock.html",
-        branch=g.user.branch,
-        items=items,
-        names=names,
-        api_error=api_error
-    )
+    return render_template("stock.html", branch=g.user.branch, items=items, names=names, api_error=api_error)
 
 
 @app.route("/stock/add", methods=["POST"])
 @common_required
 def stock_add():
-    product_api_id = _positive_int(request.form.get("product_api_id"))
+    product_api_id = _positive_int(request.form.get("product_api_id"))   # étape 1
     quantity = _positive_int(request.form.get("quantity"))
-
-    if product_api_id is None or quantity is None:
+    if product_api_id is None or quantity is None:                         # étape 2
         flash("Le produit et la quantité doivent être des nombres entiers positifs.")
         return redirect(url_for("stock"))
-
-    try:
+    try:                                                                   # règle 4 : le produit existe-t-il ?
         product = get_product(product_api_id)
     except ProductApiError as error:
         flash(f"{error} Ajout impossible pour le moment.")
         return redirect(url_for("stock"))
-
     if product is None:
         flash(f"Le produit {product_api_id} n'existe pas dans le catalogue.")
         return redirect(url_for("stock"))
-
     if product["discontinued"]:
-        flash(
-            f"Le produit {product_api_id} ({product['name']}) "
-            "n'est plus commercialisé : ajout refusé."
-        )
+        flash(f"Le produit {product_api_id} ({product['name']}) n'est plus commercialisé : ajout refusé.")
         return redirect(url_for("stock"))
-
-    branch_id = g.user.branch_id
-    item = Stock.query.filter_by(
-        branch_id=branch_id,
-        product_api_id=product_api_id
-    ).first()
-
+    branch_id = g.user.branch_id                                           # étape 3
+    item = Stock.query.filter_by(branch_id=branch_id, product_api_id=product_api_id).first()  # étape 4
     if item is not None:
-        item.quantity = item.quantity + quantity
+        item.quantity = item.quantity + quantity                           # étape 5
     else:
-        db.session.add(
-            Stock(
-                branch_id=branch_id,
-                product_api_id=product_api_id,
-                quantity=quantity
-            )
-        )
-
-    db.session.commit()
+        db.session.add(Stock(branch_id=branch_id, product_api_id=product_api_id, quantity=quantity))  # étape 6
+    db.session.commit()                                                    # étape 7
     flash(f"Ajouté : {quantity} × {product['name']} (produit {product_api_id}).")
     return redirect(url_for("stock"))
 
@@ -254,33 +188,23 @@ def stock_add():
 def stock_remove():
     product_api_id = _positive_int(request.form.get("product_api_id"))
     quantity = _positive_int(request.form.get("quantity"))
-
     if product_api_id is None or quantity is None:
         flash("Le produit et la quantité doivent être des nombres entiers positifs.")
         return redirect(url_for("stock"))
-
-    item = Stock.query.filter_by(
-        branch_id=g.user.branch_id,
-        product_api_id=product_api_id
-    ).first()
-
-    if item is None:
+    item = Stock.query.filter_by(branch_id=g.user.branch_id, product_api_id=product_api_id).first()
+    if item is None:                                   # refus 1 : la ligne n'existe pas
         flash(f"Le produit {product_api_id} n'est pas en stock dans votre agence.")
         return redirect(url_for("stock"))
-
-    if quantity > item.quantity:
+    if quantity > item.quantity:                       # refus 2 : pas assez de stock
         flash(f"Impossible de retirer {quantity} : il n'en reste que {item.quantity}.")
         return redirect(url_for("stock"))
-
     item.quantity = item.quantity - quantity
-
     try:
         db.session.commit()
-    except IntegrityError:
+    except IntegrityError:                             # dernier rempart : la base refuse
         db.session.rollback()
         flash("Opération refusée par la base de données : le stock n'a pas changé.")
         return redirect(url_for("stock"))
-
     flash(f"Retiré : {quantity} du produit {product_api_id}.")
     return redirect(url_for("stock"))
 
@@ -289,7 +213,3 @@ def stock_remove():
 def logout():
     session.clear()
     return redirect(url_for("login"))
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
