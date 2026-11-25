@@ -1,4 +1,3 @@
-
 services:
   bdd:
     image: postgres:18-alpine
@@ -24,6 +23,8 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@bdd:5432/${POSTGRES_DB}
       PRODUCT_API_BASE_URL: http://external-products-api:5000
       SECRET_KEY: ${SECRET_KEY}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD}
     ports:
       - "5000:5000"
     depends_on:
