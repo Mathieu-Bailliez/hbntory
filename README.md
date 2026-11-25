@@ -79,7 +79,7 @@ Détails : voir [docs/architecture.md](docs/architecture.md)
 ### Récupérer le projet
 
 ```bash
-git clone <url du dépôt>
+git clone https://github.com/Mathieu-Bailliez/hbntory.git
 cd hbntory
 ```
 
