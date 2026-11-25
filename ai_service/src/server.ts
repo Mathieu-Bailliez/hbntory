@@ -1,4 +1,3 @@
-
 import express, { Request, Response } from "express";
 import "dotenv/config";
 
@@ -8,7 +7,21 @@ const app = express();
 
 const PORT = Number(process.env.PORT) || 3001;
 
-app.use(express.json());
+// Autorisation des requêtes du Client Web
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    res.sendStatus(204);
+    return;
+  }
+
+  next();
+});
+
+app.use(express.json({ limit: "10kb" }));
 
 // Vérification du service IA
 app.get("/health", (_req: Request, res: Response) => {
@@ -25,11 +38,12 @@ app.post("/api/query", async (req: Request, res: Response) => {
 
     if (
       typeof question !== "string" ||
-      question.trim().length === 0
+      question.trim().length === 0 ||
+      question.length > 1000
     ) {
       res.status(400).json({
         status: "error",
-        message: "Une question valide est obligatoire.",
+        message: "Une question valide de 1000 caractères maximum est obligatoire.",
       });
       return;
     }
