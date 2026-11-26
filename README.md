@@ -240,3 +240,7 @@ Aucune pour le moment.
 - [Tests du Backoffice](docs/test.md) : script de test manuel et résultats
 - [Tests du serveur MCP](docs/product-mcp-tests.md) : tests des outils MCP produits
 - [Contribuer](docs/CONTRIBUTING.md) : notre façon de travailler avec Git
+
+## Installation
+
+Pour installer et executer le projet veuillez suivre les instructions dans le fichier (docs/INSTALLATION.md).
