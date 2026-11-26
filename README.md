@@ -243,4 +243,4 @@ Aucune pour le moment.
 
 ## Installation
 
-Pour installer et executer le projet veuillez suivre les instructions dans le fichier (docs/INSTALLATION.md).
+Pour installer et exécuter le projet, veuillez suivre le [Guide d'installation](docs/INSTALLATION.md).
